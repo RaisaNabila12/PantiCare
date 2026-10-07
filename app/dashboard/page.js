@@ -74,25 +74,34 @@ export default function DashboardOverview() {
           return (
             <div
               key={stat.label}
-              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-all"
             >
-              <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <Icon size={21} strokeWidth={2} />
+              <div className="flex items-start justify-between">
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Icon size={22} strokeWidth={2} />
                 </div>
 
-                <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
+                <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                  <TrendingUp size={13} />
                   {stat.change}
-                </span>
+                </div>
               </div>
 
-              <p className="text-xs font-semibold text-slate-500 mt-4">
-                {stat.label}
-              </p>
+              <div className="mt-5">
+                <p className="text-xs font-medium text-slate-500">
+                  {stat.label}
+                </p>
 
-              <p className="text-xl font-bold text-slate-900 mt-1">
-                {stat.value}
-              </p>
+                <p className="text-2xl font-bold text-slate-900 mt-1">
+                  {stat.value}
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100">
+                <p className="text-xs text-slate-400">
+                  Data diperbarui secara berkala
+                </p>
+              </div>
             </div>
           );
         })}
