@@ -1,33 +1,65 @@
+
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Heart } from 'lucide-react';
+import { ArrowRight, Heart, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+
+  const [role, setRole] = useState('admin');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({
     type: '',
     text: '',
   });
 
+  const saveLoginData = (token) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('panticare_role', role);
+    localStorage.setItem(
+      'panticare_user',
+      JSON.stringify({
+        name: formData.email.split('@')[0],
+        email: formData.email,
+      })
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return;
+
     setLoading(true);
-    setMessage({
-      type: '',
-      text: '',
-    });
+    setMessage({ type: '', text: '' });
+
+    // Mode demo frontend
+    // Login simulasi tanpa membutuhkan backend.
+    const demoLogin = () => {
+      saveLoginData('demo-auth-token');
+
+      setMessage({
+        type: 'success',
+        text: 'Login Berhasil (Mode Demo)! Mengalihkan...',
+      });
+
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
+    };
 
     try {
       const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        process.env.NEXT_PUBLIC_API_URL ||
+        'http://localhost:5000/api';
 
       const res = await fetch(`${apiUrl}/login`, {
         method: 'POST',
@@ -43,24 +75,15 @@ export default function LoginPage() {
 
       const data = await res.json();
 
-      localStorage.setItem('token', data.token || 'demo-token');
+      saveLoginData(data.token || 'demo-token');
       router.push('/dashboard');
     } catch (err) {
       console.warn(
-        'Backend offline, menggunakan simulasi lokal:',
+        'Backend belum tersedia, menggunakan mode demo:',
         err.message
       );
 
-      localStorage.setItem('token', 'demo-auth-token');
-
-      setMessage({
-        type: 'success',
-        text: 'Login Berhasil (Mode Demo)! Mengalihkan...',
-      });
-
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
+      demoLogin();
     } finally {
       setLoading(false);
     }
@@ -81,11 +104,7 @@ export default function LoginPage() {
             href="/"
             className="flex items-center gap-2 text-2xl font-bold tracking-tight text-emerald-400"
           >
-            <Heart
-              size={24}
-              strokeWidth={2.5}
-              fill="currentColor"
-            />
+            <Heart size={24} strokeWidth={2.5} fill="currentColor" />
             PantiCare
           </Link>
         </div>
@@ -135,6 +154,23 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Role */}
+            <div className="relative">
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full appearance-none border border-slate-200 rounded-xl py-3 pl-3 pr-12 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              >
+                <option value="admin">Admin</option>
+                <option value="pengguna">Pengguna / Donatur</option>
+              </select>
+
+              <ChevronDown
+                size={18}
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
+              />
+            </div>
+
             {/* Email */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">

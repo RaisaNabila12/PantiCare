@@ -1,3 +1,7 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   Baby,
   CalendarDays,
@@ -5,228 +9,249 @@ import {
   CircleDollarSign,
   Package,
   TrendingUp,
+  MapPin,
 } from 'lucide-react';
+import { getDonasi, rupiah } from '../lib/donasi';
+import {
+  INITIAL_KEBUTUHAN,
+  INITIAL_KEGIATAN,
+  readLocal,
+  formatTanggal,
+} from '../lib/panti-data';
+
+const ANAK_AWAL = [
+  { id: 1, nama: 'Ahmad Rizky', status: 'Aktif' },
+  { id: 2, nama: 'Siti Nurhaliza', status: 'Aktif' },
+  { id: 3, nama: 'Budi Santoso', status: 'Aktif' },
+  { id: 4, nama: 'Dewi Anggraini', status: 'Aktif' },
+];
 
 export default function DashboardOverview() {
+  const [anak, setAnak] = useState(ANAK_AWAL);
+  const [kebutuhan, setKebutuhan] = useState(INITIAL_KEBUTUHAN);
+  const [kegiatan, setKegiatan] = useState(INITIAL_KEGIATAN);
+  const [donasi, setDonasi] = useState([]);
+
+  useEffect(() => {
+    const refresh = () => {
+      setAnak(readLocal('panticare_anak', ANAK_AWAL));
+      setKebutuhan(readLocal('panticare_kebutuhan', INITIAL_KEBUTUHAN));
+      setKegiatan(readLocal('panticare_kegiatan', INITIAL_KEGIATAN));
+      setDonasi(getDonasi());
+    };
+
+    refresh();
+
+    window.addEventListener('panticare-data-update', refresh);
+    window.addEventListener('panticare-donasi-update', refresh);
+    window.addEventListener('storage', refresh);
+
+    return () => {
+      window.removeEventListener('panticare-data-update', refresh);
+      window.removeEventListener('panticare-donasi-update', refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
+
+  const bulanIni = new Date().getMonth();
+  const tahunIni = new Date().getFullYear();
+
+  const totalDonasi = donasi
+    .filter((d) => ['Diterima', 'Tercatat'].includes(d.status || 'Tercatat'))
+    .reduce((sum, d) => sum + Number(d.jumlah || 0), 0);
+
+  const upcoming = useMemo(
+    () =>
+      kegiatan
+        .filter((x) => new Date(`${x.tanggal}T23:59:59`) >= new Date())
+        .sort((a, b) => a.tanggal.localeCompare(b.tanggal))
+        .slice(0, 4),
+    [kegiatan]
+  );
+
   const stats = [
     {
       label: 'Total Anak Asuh',
-      value: '48 Anak',
-      change: '+2 bulan ini',
+      value: `${anak.length} Anak`,
+      change: `${anak.filter((x) => x.status === 'Aktif').length} aktif`,
       icon: Baby,
     },
     {
-      label: 'Total Donasi Bulan Ini',
-      value: 'Rp 24.500.000',
-      change: '+12%',
+      label: 'Total Donasi Tercatat',
+      value: rupiah(totalDonasi),
+      change: `${donasi.length} transaksi`,
       icon: CircleDollarSign,
     },
     {
-      label: 'Kebutuhan Mendesak',
-      value: '5 Barang',
-      change: 'Perlu segera',
+      label: 'Kebutuhan Belum Terpenuhi',
+      value: `${kebutuhan.filter((x) => x.status !== 'Terpenuhi').length} Item`,
+      change: 'Perlu dipantau',
       icon: Package,
     },
     {
       label: 'Kegiatan Mendatang',
-      value: '3 Acara',
-      change: 'Minggu ini',
+      value: `${upcoming.length} Agenda`,
+      change: 'Jadwal terdekat',
       icon: CalendarDays,
-    },
-  ];
-
-  const activities = [
-    {
-      title: 'Pemeriksaan Kesehatan Gratis',
-      date: '15 Oktober 2026',
-      location: 'Aula Utama PantiCare',
-    },
-    {
-      title: 'Pelatihan Coding & Web Basic',
-      date: '22 Oktober 2026',
-      location: 'Lab Komputer PantiCare',
-    },
-    {
-      title: 'Kegiatan Belajar Bersama',
-      date: '28 Oktober 2026',
-      location: 'Ruang Belajar PantiCare',
     },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">
           Ringkasan Dashboard
         </h1>
-
-        <p className="text-sm text-slate-500 mt-1">
-          Selamat datang kembali di sistem pengelolaan PantiCare.
+        <p className="mt-1 text-sm text-slate-500">
+          Pantau aktivitas dan informasi PantiCare dalam satu halaman.
         </p>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((s) => {
+          const Icon = s.icon;
 
           return (
             <div
-              key={stat.label}
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-all"
+              key={s.label}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
             >
               <div className="flex items-start justify-between">
-                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <Icon size={22} strokeWidth={2} />
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <Icon size={22} />
                 </div>
-
-                <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-                  <TrendingUp size={13} />
-                  {stat.change}
-                </div>
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  {s.change}
+                </span>
               </div>
 
-              <div className="mt-5">
-                <p className="text-xs font-medium text-slate-500">
-                  {stat.label}
-                </p>
-
-                <p className="text-2xl font-bold text-slate-900 mt-1">
-                  {stat.value}
-                </p>
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100">
-                <p className="text-xs text-slate-400">
-                  Data diperbarui secara berkala
-                </p>
-              </div>
+              <p className="mt-5 text-xs font-medium text-slate-500">
+                {s.label}
+              </p>
+              <p className="mt-1 text-xl font-bold text-slate-900">
+                {s.value}
+              </p>
+              <p className="mt-3 border-t pt-3 text-xs text-slate-400">
+                Dihitung dari data demo tersimpan
+              </p>
             </div>
           );
         })}
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Program Unggulan */}
-        <div className="lg:col-span-2 relative rounded-2xl overflow-hidden min-h-72 shadow-md text-white flex items-center p-8">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="relative flex min-h-72 items-center overflow-hidden rounded-2xl p-8 text-white shadow-md lg:col-span-2">
           <img
             src="https://images.unsplash.com/photo-1542810634-71277d95dcbb?q=80&w=1200&auto=format&fit=crop"
             alt="Kegiatan anak PantiCare"
-            className="absolute inset-0 w-full h-full object-cover brightness-50"
+            className="absolute inset-0 h-full w-full object-cover brightness-50"
           />
 
           <div className="relative z-10 max-w-lg">
-            <span className="inline-flex items-center gap-1.5 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-bold uppercase">
               <TrendingUp size={13} />
               Program Unggulan
             </span>
 
-            <h2 className="text-2xl font-bold mt-3">
+            <h2 className="mt-3 text-2xl font-bold">
               Pendidikan Digital untuk Anak Asuh
             </h2>
 
-            <p className="text-sm text-slate-200 mt-2 leading-relaxed">
-              Membantu anak-anak belajar pemrograman dasar dan keahlian
-              digital untuk mempersiapkan masa depan yang lebih baik.
+            <p className="mt-2 text-sm leading-relaxed text-slate-200">
+              Membantu anak-anak belajar pemrograman dasar dan keahlian digital
+              untuk mempersiapkan masa depan yang lebih baik.
             </p>
           </div>
         </div>
 
-        {/* Status Sistem */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-bold text-slate-900">
-                Status Sistem
+                Ringkasan Pengelolaan
               </h2>
-
-              <p className="text-xs text-slate-500 mt-1">
-                Kondisi pengelolaan PantiCare
+              <p className="mt-1 text-xs text-slate-500">
+                Kondisi data saat ini
               </p>
             </div>
-
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 size={21} />
-            </div>
+            <CheckCircle2 className="text-emerald-600" size={22} />
           </div>
 
           <div className="mt-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500">
-                Data Anak
-              </span>
-
-              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                Aktif
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500">
-                Pencatatan Donasi
-              </span>
-
-              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                Aktif
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500">
-                Agenda Kegiatan
-              </span>
-
-              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                Aktif
-              </span>
-            </div>
+            {[
+              ['Data Anak', anak.length + ' data'],
+              ['Pencatatan Donasi', donasi.length + ' transaksi'],
+              ['Kebutuhan Panti', kebutuhan.length + ' item'],
+              ['Agenda Kegiatan', kegiatan.length + ' agenda'],
+            ].map(([a, b]) => (
+              <div
+                key={a}
+                className="flex items-center justify-between gap-2"
+              >
+                <span className="text-sm text-slate-500">{a}</span>
+                <span className="text-xs font-semibold text-emerald-700">
+                  {b}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Upcoming Activities */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-200">
-          <h2 className="font-bold text-slate-900">
-            Kegiatan Mendatang
-          </h2>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b p-5">
+          <div>
+            <h2 className="font-bold text-slate-900">
+              Kegiatan Mendatang
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Agenda sosial dan edukasi berikutnya.
+            </p>
+          </div>
 
-          <p className="text-xs text-slate-500 mt-1">
-            Agenda kegiatan sosial dan edukasi PantiCare.
-          </p>
+          <Link
+            href="/dashboard/kegiatan"
+            className="text-sm font-semibold text-emerald-700"
+          >
+            Lihat semua
+          </Link>
         </div>
 
         <div className="divide-y divide-slate-100">
-          {activities.map((activity) => (
+          {upcoming.map((x) => (
             <div
-              key={activity.title}
-              className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-slate-50 transition-colors"
+              key={x.id}
+              className="flex flex-col justify-between gap-3 p-5 hover:bg-slate-50 sm:flex-row sm:items-center"
             >
               <div className="flex items-start gap-3">
-                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600">
                   <CalendarDays size={18} />
                 </div>
 
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900">
-                    {activity.title}
+                    {x.judul}
                   </h3>
-
-                  <p className="text-xs text-slate-500 mt-1">
-                    {activity.location}
+                  <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                    <MapPin size={13} />
+                    {x.lokasi}
                   </p>
                 </div>
               </div>
 
               <span className="text-xs font-semibold text-emerald-700">
-                {activity.date}
+                {formatTanggal(x.tanggal)}
               </span>
             </div>
           ))}
+
+          {upcoming.length === 0 && (
+            <p className="p-6 text-sm text-slate-500">
+              Belum ada kegiatan mendatang.
+            </p>
+          )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
