@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -16,10 +17,16 @@ export default function RegisterPage() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [message, setMessage] = useState({
+    type: '',
+    text: '',
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return;
+
     setMessage({ type: '', text: '' });
 
     if (formData.password !== formData.confirmPassword) {
@@ -32,9 +39,32 @@ export default function RegisterPage() {
 
     setLoading(true);
 
+    const demoRegister = () => {
+      // Simpan data demo untuk kebutuhan frontend.
+      // Jangan gunakan penyimpanan password asli di localStorage
+      // untuk aplikasi produksi.
+      localStorage.setItem(
+        'panticare_user',
+        JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+        })
+      );
+
+      setMessage({
+        type: 'success',
+        text: 'Registrasi Berhasil (Mode Demo)! Mengalihkan ke login...',
+      });
+
+      setTimeout(() => {
+        router.push('/login');
+      }, 1500);
+    };
+
     try {
       const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        process.env.NEXT_PUBLIC_API_URL ||
+        'http://localhost:5000/api';
 
       const res = await fetch(`${apiUrl}/register`, {
         method: 'POST',
@@ -62,27 +92,11 @@ export default function RegisterPage() {
       }, 1500);
     } catch (err) {
       console.warn(
-        'Backend offline, menggunakan simulasi lokal:',
+        'Backend belum tersedia, menggunakan mode demo:',
         err.message
       );
 
-      localStorage.setItem(
-        'panticare_user',
-        JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        })
-      );
-
-      setMessage({
-        type: 'success',
-        text: 'Registrasi Berhasil (Mode Demo)! Mengalihkan ke login...',
-      });
-
-      setTimeout(() => {
-        router.push('/login');
-      }, 1500);
+      demoRegister();
     } finally {
       setLoading(false);
     }
@@ -90,6 +104,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
+      {/* Left Section */}
       <div className="relative hidden lg:flex flex-col justify-between p-12 text-white bg-emerald-950">
         <img
           src="https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=1200&auto=format&fit=crop"
@@ -131,6 +146,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
+      {/* Right Section */}
       <div className="flex items-center justify-center p-6 sm:p-12 bg-white">
         <div className="w-full max-w-md space-y-6">
           <div>
@@ -160,6 +176,7 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Nama Lengkap */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Nama Lengkap
@@ -180,6 +197,7 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Email */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Email
@@ -200,6 +218,7 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Password */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Password
@@ -208,6 +227,7 @@ export default function RegisterPage() {
               <input
                 type="password"
                 required
+                minLength={6}
                 placeholder="Masukkan password"
                 value={formData.password}
                 onChange={(e) =>
@@ -220,6 +240,7 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Konfirmasi Password */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Konfirmasi Password
@@ -228,6 +249,7 @@ export default function RegisterPage() {
               <input
                 type="password"
                 required
+                minLength={6}
                 placeholder="Ulangi password"
                 value={formData.confirmPassword}
                 onChange={(e) =>
@@ -240,6 +262,7 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Register Button */}
             <button
               type="submit"
               disabled={loading}

@@ -1,216 +1,199 @@
+
 'use client';
 
-import { useState } from 'react';
-import {
-  Banknote,
-  CheckCircle2,
-  CreditCard,
-  HandCoins,
-  Search,
-  Users,
-} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { getDonasi, saveDonasi, rupiah } from '../../lib/donasi';
 
 export default function DonasiPage() {
-  const [search, setSearch] = useState('');
+  const [donasi, setDonasi] = useState([]);
+  const [role, setRole] = useState('pengguna');
 
-  const donasi = [
-    {
-      id: 1,
-      donatur: 'Hamba Allah',
-      jumlah: 'Rp 2.000.000',
-      metode: 'Transfer BCA',
-      tanggal: '06 Okt 2026',
-    },
-    {
-      id: 2,
-      donatur: 'PT Peduli Bangsa',
-      jumlah: 'Rp 10.000.000',
-      metode: 'Transfer Mandiri',
-      tanggal: '04 Okt 2026',
-    },
-    {
-      id: 3,
-      donatur: 'Rina Kusuma',
-      jumlah: 'Rp 500.000',
-      metode: 'QRIS',
-      tanggal: '01 Okt 2026',
-    },
-  ];
+  useEffect(() => {
+    setRole(localStorage.getItem('panticare_role') || 'pengguna');
+  }, []);
 
-  const filteredDonasi = donasi.filter((item) =>
-    item.donatur.toLowerCase().includes(search.toLowerCase())
+  const verified = donasi.filter((d) =>
+    ['Diterima', 'Tercatat'].includes(d.status)
   );
+
+  function updateStatus(id, status) {
+    if (role !== 'admin') return;
+
+    saveDonasi(
+      getDonasi().map((d) =>
+        d.id === id ? { ...d, status } : d
+      )
+    );
+  }
+
+  function exportCSV() {
+    const rows = [
+      [
+        'ID',
+        'Donatur',
+        'Nominal',
+        'Metode',
+        'Tanggal',
+        'Status',
+        ...(role === 'admin' ? ['Verifikasi'] : []),
+      ],
+      ...donasi.map((d) => [
+        d.id,
+        d.donatur,
+        d.jumlah,
+        d.metode,
+        d.tanggal,
+        d.status,
+      ]),
+    ];
+
+    const csv =
+      '\uFEFF' +
+      rows
+        .map((r) =>
+          r
+            .map(
+              (v) =>
+                '"' + String(v ?? '').replace(/"/g, '""') + '"'
+            )
+            .join(',')
+        )
+        .join('\r\n');
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(
+      new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    );
+    a.download = 'laporan-donasi.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  useEffect(() => {
+    const refresh = () => setDonasi(getDonasi());
+
+    refresh();
+
+    window.addEventListener('storage', refresh);
+    window.addEventListener('panticare-donasi-update', refresh);
+
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('panticare-donasi-update', refresh);
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-emerald-100 text-emerald-700 rounded-xl">
-            <HandCoins size={24} />
-          </div>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Pencatatan Donasi
+        </h1>
+        <p className="text-sm text-slate-500">
+          Rekapitulasi donasi PantiCare (mode demo).
+        </p>
+      </div>
 
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              Pencatatan Donasi
-            </h1>
-
-            <p className="text-sm text-slate-500">
-              Rekapitulasi penerimaan donasi finansial PantiCare.
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          [
+            'Total Terkumpul',
+            rupiah(
+              verified.reduce(
+                (a, b) => a + Number(b.jumlah),
+                0
+              )
+            ),
+          ],
+          ['Jumlah Transaksi', `${donasi.length} Transaksi`],
+          ['Status Laporan', 'Tercatat (Demo)'],
+        ].map(([k, v]) => (
+          <div
+            key={k}
+            className="bg-white p-5 rounded-2xl border border-slate-200"
+          >
+            <p className="text-xs font-semibold text-slate-500">
+              {k}
+            </p>
+            <p className="text-xl font-bold text-emerald-600 mt-1">
+              {v}
             </p>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-500">
-                Total Terkumpul
-              </p>
+      {role === 'admin' && (
+        <button
+          onClick={exportCSV}
+          className="bg-emerald-600 text-white rounded-xl px-5 py-3"
+        >
+          Unduh Laporan CSV (Excel)
+        </button>
+      )}
 
-              <p className="text-2xl font-bold text-emerald-600 mt-1">
-                Rp 12.500.000
-              </p>
-            </div>
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+            <tr>
+              {[
+                'Donatur',
+                'Jumlah Donasi',
+                'Metode Pembayaran',
+                'Tanggal',
+                'Status',
+                ...(role === 'admin' ? ['Verifikasi'] : []),
+              ].map((v) => (
+                <th key={v} className="p-4">
+                  {v}
+                </th>
+              ))}
+            </tr>
+          </thead>
 
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-              <Banknote size={22} />
-            </div>
-          </div>
-        </div>
+          <tbody className="divide-y divide-slate-100">
+            {donasi.map((d) => (
+              <tr key={d.id}>
+                <td className="p-4 font-semibold">
+                  {d.donatur}
+                </td>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-500">
-                Jumlah Transaksi
-              </p>
+                <td className="p-4 text-emerald-600 font-bold">
+                  {rupiah(d.jumlah)}
+                </td>
 
-              <p className="text-2xl font-bold text-slate-900 mt-1">
-                3 Transaksi
-              </p>
-            </div>
+                <td className="p-4">{d.metode}</td>
 
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-              <Users size={22} />
-            </div>
-          </div>
-        </div>
+                <td className="p-4">{d.tanggal}</td>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-slate-500">
-                Status Laporan
-              </p>
+                <td className="p-4">
+                  {d.status || 'Tercatat'}
+                </td>
 
-              <p className="text-2xl font-bold text-blue-600 mt-1">
-                Terverifikasi
-              </p>
-            </div>
-
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-              <CheckCircle2 size={22} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Donation History */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="p-5 border-b border-slate-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="font-bold text-slate-900">
-                Riwayat Donasi
-              </h2>
-
-              <p className="text-xs text-slate-500 mt-1">
-                Daftar donasi yang telah diterima PantiCare.
-              </p>
-            </div>
-
-            {/* Search */}
-            <div className="relative w-full sm:w-64">
-              <Search
-                size={17}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-
-              <input
-                type="text"
-                placeholder="Cari nama donatur..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
-              <tr>
-                <th className="p-4">Donatur</th>
-                <th className="p-4">Jumlah Donasi</th>
-                <th className="p-4">Metode Pembayaran</th>
-                <th className="p-4">Tanggal</th>
-                <th className="p-4">Status</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-100">
-              {filteredDonasi.length > 0 ? (
-                filteredDonasi.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-slate-50/80 transition-colors"
-                  >
-                    <td className="p-4 font-semibold text-slate-800">
-                      {item.donatur}
-                    </td>
-
-                    <td className="p-4 text-emerald-600 font-bold">
-                      {item.jumlah}
-                    </td>
-
-                    <td className="p-4 text-slate-600">
-                      <div className="flex items-center gap-2">
-                        <CreditCard size={16} className="text-slate-400" />
-                        {item.metode}
-                      </div>
-                    </td>
-
-                    <td className="p-4 text-slate-500">
-                      {item.tanggal}
-                    </td>
-
-                    <td className="p-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">
-                        <CheckCircle2 size={13} />
-                        Terverifikasi
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan="5"
-                    className="p-8 text-center text-slate-500"
-                  >
-                    Data donasi tidak ditemukan.
+                {role === 'admin' && (
+                  <td className="p-4">
+                    <select
+                      aria-label="Verifikasi donasi"
+                      className="border rounded-lg p-2"
+                      value={d.status || 'Menunggu'}
+                      onChange={(e) =>
+                        updateStatus(d.id, e.target.value)
+                      }
+                    >
+                      {[
+                        'Menunggu',
+                        'Diterima',
+                        'Ditolak',
+                        'Tercatat',
+                      ].map((x) => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </select>
                   </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
