@@ -22,3 +22,21 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model playing_with_neon {
+  id    Int    @id @default(autoincrement())
+  name  String
+  value Float? @db.Real
+}
+
+model Child {
+  id             Int      @id @default(autoincrement())
+  name           String
+  age            Int
+  educationLevel String
+  grade          String
+  admissionDate  DateTime
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
