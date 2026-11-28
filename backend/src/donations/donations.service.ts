@@ -20,6 +20,7 @@ export class DonationsService {
         id: true,
         userId: true,
         amount: true,
+        paymentMethod: true,
         status: true,
         createdAt: true,
         updatedAt: true,
@@ -44,6 +45,7 @@ export class DonationsService {
         id: true,
         userId: true,
         amount: true,
+        paymentMethod: true,
         status: true,
         createdAt: true,
         updatedAt: true,
@@ -70,17 +72,24 @@ export class DonationsService {
     return donation;
   }
 
-  async create(userId: number, amount: number) {
+  // Membuat donasi baru.
+  async create(
+    userId: number,
+    amount: number,
+    paymentMethod: string,
+  ) {
     return this.prisma.donation.create({
       data: {
         userId,
         amount,
+        paymentMethod,
         status: 'PENDING',
       },
       select: {
         id: true,
         userId: true,
         amount: true,
+        paymentMethod: true,
         status: true,
         createdAt: true,
       },
@@ -115,8 +124,8 @@ export class DonationsService {
     }
   }
 
+  // Mengunggah bukti pembayaran.
   async uploadProof(id: number, userId: number, proofUrl: string) {
-    // Periksa kembali sebelum menyimpan alamat file ke database.
     await this.assertCanUploadProof(id, userId);
 
     return this.prisma.donation.update({

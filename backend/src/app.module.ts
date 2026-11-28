@@ -6,6 +6,8 @@ import { PrismaModule } from './prisma/prisma.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { ChildrenModule } from './children/children.module.js';
+import { DonationTargetModule } from './donation-target/donation-target.module.js';
+import { DonationReportsModule } from './donation-reports/donation-reports.module.js';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { ChildrenModule } from './children/children.module.js';
   UsersModule,
   ChildrenModule,
   DonationsModule,
+  DonationTargetModule,
+  DonationReportsModule,
 ],
   controllers: [AppController],
   providers: [AppService],
