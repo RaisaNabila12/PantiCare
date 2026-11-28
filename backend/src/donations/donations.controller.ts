@@ -75,9 +75,16 @@ export class DonationsController {
   @Roles('USER')
   create(
     @Req() req: AuthenticatedRequest,
-    @Body() body: { amount: unknown },
+    @Body() body: {
+      amount: unknown;
+      paymentMethod: unknown;
+    },
   ) {
     const amount = Number(body?.amount);
+    const paymentMethod =
+      typeof body?.paymentMethod === 'string'
+        ? body.paymentMethod.trim()
+        : '';
 
     if (
       body?.amount === undefined ||
@@ -91,9 +98,16 @@ export class DonationsController {
       );
     }
 
+    if (!paymentMethod) {
+      throw new BadRequestException(
+        'Metode pembayaran wajib diisi',
+      );
+    }
+
     return this.donationsService.create(
       req.user.id,
       amount,
+      paymentMethod,
     );
   }
 
@@ -181,7 +195,6 @@ export class DonationsController {
     }
 
     const chunks: Buffer[] = [];
-
     const stream = createReadStream(file.path);
 
     for await (const chunk of stream) {
@@ -319,7 +332,7 @@ export class DonationsController {
     );
   }
 
- // PATCH update status donasi (ADMIN saja)
+  // PATCH update status donasi (ADMIN saja)
   @Patch(':id/status')
   @Roles('ADMIN')
   updateStatus(
